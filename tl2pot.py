@@ -62,7 +62,7 @@ def tl2pot(projectpath, outfile='game.pot'):
     # sort primarily by string location (not by .rpy filename) because
     # Ren'Py inserts engine strings in game/tl/xxx/common.rpy
     strings.sort(key=lambda s: (s['source'].split(':')[0], int(s['source'].split(':')[1])))
-    
+
     occurrences = {}
     for s in strings:
         occurrences[s['text']] = occurrences.get(s['text'], 0) + 1
@@ -76,6 +76,8 @@ msgstr ""
 
 """)
     for s in strings:
+        if s['pers'] != None and s['pers'] != '':
+            out.write(u'# Speaker: ' + s['pers'] + u'\n')
         out.write(u'#: ' + s['source'] + u'\n')
         if occurrences[s['text']] > 1:
             out.write(u'msgctxt "' + (s['id'] or s['source']) + u'"\n')

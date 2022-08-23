@@ -91,6 +91,16 @@ def extract_dialog_string(dialog_line):
         return res[1]
     return res[0]  # (what)
 
+def extract_dialog_pers(line):
+    pos = 4
+    res = []
+    while pos < len(line):
+        if line[pos] == "\"":
+            res.append({'pers': line[4:pos-1]})
+            return res[0]
+        pos += 1
+    return {'pers': None}
+
 def extract_base_string(dialog_line):
     res = extract_dqstrings(dialog_line)
     if len(res) == 0:
@@ -99,7 +109,7 @@ def extract_base_string(dialog_line):
 
 def parse_next_block(lines):
     ret = []
-    block_string = {'id':None, 'source':None, 'text':None, 'translation':None}
+    block_string = {'id':None, 'source':None, 'pers':None, 'text':None, 'translation':None}
     while len(lines) > 0:
         line = lines.pop()
         if is_empty(line):
@@ -122,7 +132,7 @@ def parse_next_block(lines):
                         break
             elif block_string['id'] == 'strings':
                 # basic strings block
-                string = {'id':None, 'source':None, 'text':None, 'translation':None}
+                string = {'id':None, 'source':None, 'pers':None, 'text':None, 'translation':None}
                 while len(lines) > 0:
                     line = lines.pop()
                     if is_empty(line):
@@ -138,7 +148,7 @@ def parse_next_block(lines):
                     elif line.lstrip().startswith('new '):
                         string['translation'] = extract_base_string(line)['text']
                         ret.append(string)
-                        string = {'id':None, 'source':None, 'text':None, 'translation':None}
+                        string = {'id':None, 'source':None, 'pers':None,'text':None, 'translation':None}
                     else:
                         pass
                 break
@@ -156,6 +166,8 @@ def parse_next_block(lines):
                         # untranslated original
                         continue
                     else:
+                        p = extract_dialog_pers(line)
+                        block_string['pers'] = p['pers']
                         # dialog body
                         s = extract_dialog_string(line)
                         if s is None:
