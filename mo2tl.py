@@ -96,7 +96,7 @@ def ugettext_nometadata(translations, lookup):
     '''
     if lookup == '':
         return None
-    return translations.ugettext(lookup)
+    return translations.gettext(lookup)
 
 def mo2tl(projectpath, mofile, renpy_target_language):
     if not re.match('^[a-z_]+$', renpy_target_language, re.IGNORECASE):
@@ -136,7 +136,7 @@ def mo2tl(projectpath, mofile, renpy_target_language):
 
     # Setup gettext directory structure
     localedir = tempfile.mkdtemp()
-    if not os.environ.has_key('LANG'):
+    if not 'LANG' in os.environ:
         os.environ['LANG'] = 'en_US.UTF-8'
     msgdir = os.path.join(localedir,
                           os.environ['LANG'],
@@ -152,7 +152,7 @@ def mo2tl(projectpath, mofile, renpy_target_language):
     translations = gettext.translation('game', localedir)
     class NoneOnMissingTranslation:
         @staticmethod
-        def ugettext(str):
+        def gettext(str):
             return None
     translations.add_fallback(NoneOnMissingTranslation)
 
@@ -215,7 +215,7 @@ def mo2tl(projectpath, mofile, renpy_target_language):
                             out.write(line)
                     else:
                         # dialog block
-                        if not o_blocks_index.has_key(msgid):
+                        if not msgid in o_blocks_index:
                             obsolete = u"# OBSOLETE\n"
                             if last_comment != obsolete:
                                 out.write(obsolete)
