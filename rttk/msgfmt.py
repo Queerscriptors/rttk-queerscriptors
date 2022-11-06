@@ -34,6 +34,7 @@ import ast
 import getopt
 import struct
 import array
+from email.parser import HeaderParser
 
 __version__ = "1.2"
 
@@ -41,9 +42,9 @@ MESSAGES = {}
 
 
 def usage(code, msg=''):
-    print >> sys.stderr, __doc__
+    print(__doc__, file=sys.stderr)
     if msg:
-        print >> sys.stderr, msg
+        print(msg, file=sys.stderr)
     sys.exit(code)
 
 
@@ -54,23 +55,22 @@ def add(ctxt, id, str, fuzzy):
         if ctxt is None:
             MESSAGES[id] = str
         else:
-            MESSAGES[ctxt + "\x04" + id] = str
+            MESSAGES[b"%b\x04%b" % (ctxt, id)] = str
 
 
 def generate():
     "Return the generated output."
     global MESSAGES
-    keys = MESSAGES.keys()
     # the keys are sorted in the .mo file
-    keys.sort()
+    keys = sorted(MESSAGES.keys())
     offsets = []
-    ids = strs = ''
+    ids = strs = b''
     for id in keys:
         # For each string, we need size and file offset.  Each string is NUL
         # terminated; the NUL does not count into the size.
         offsets.append((len(ids), len(id), len(strs), len(MESSAGES[id])))
-        ids += id + '\0'
-        strs += MESSAGES[id] + '\0'
+        ids += id + b'\0'
+        strs += MESSAGES[id] + b'\0'
     output = ''
     # The header is 7 32-bit unsigned integers.  We don't use hash tables, so
     # the keys start right after the index tables.
@@ -93,7 +93,7 @@ def generate():
                          7*4,               # start of key index
                          7*4+len(keys)*8,   # start of value index
                          0, 0)              # size and offset of hash table
-    output += array.array("i", offsets).tostring()
+    output += array.array("i", offsets).tobytes()
     output += ids
     output += strs
     return output
@@ -113,17 +113,23 @@ def make(filename, outfile):
         outfile = os.path.splitext(infile)[0] + '.mo'
 
     try:
-        lines = open(infile).readlines()
+        with open(infile, 'rb') as f:
+            lines = f.readlines()
     except IOError as msg:
-        print >> sys.stderr, msg
+        print(msg, file=sys.stderr)
         sys.exit(1)
 
     section = msgctxt = None
     fuzzy = 0
 
+    # Start off assuming Latin-1, so everything decodes without failure,
+    # until we know the exact encoding
+    encoding = 'latin-1'
+
     # Parse the catalog
     lno = 0
     for l in lines:
+        l = l.decode(encoding)
         lno += 1
         # If we get a comment line after a msgstr, this is a new entry
         if l[0] == '#' and section == STR:
@@ -146,34 +152,40 @@ def make(filename, outfile):
         elif l.startswith('msgid') and not l.startswith('msgid_plural'):
             if section == STR:
                 add(msgctxt, msgid, msgstr, fuzzy)
+                if not msgid:
+                    # See whether there is an encoding declaration
+                    p = HeaderParser()
+                    charset = p.parsestr(msgstr.decode(encoding)).get_content_charset()
+                    if charset:
+                        encoding = charset
             section = ID
             l = l[5:]
-            msgid = msgstr = ''
+            msgid = msgstr = b''
             is_plural = False
         # This is a message with plural forms
         elif l.startswith('msgid_plural'):
             if section != ID:
-                print >> sys.stderr, 'msgid_plural not preceded by msgid on %s:%d' %\
-                    (infile, lno)
+                print('msgid_plural not preceded by msgid on %s:%d' % (infile, lno),
+                      file=sys.stderr)
                 sys.exit(1)
             l = l[12:]
-            msgid += '\0' # separator of singular and plural
+            msgid += b'\0' # separator of singular and plural
             is_plural = True
         # Now we are in a msgstr section
         elif l.startswith('msgstr'):
             section = STR
             if l.startswith('msgstr['):
                 if not is_plural:
-                    print >> sys.stderr, 'plural without msgid_plural on %s:%d' %\
-                        (infile, lno)
+                    print('plural without msgid_plural on %s:%d' % (infile, lno),
+                          file=sys.stderr)
                     sys.exit(1)
                 l = l.split(']', 1)[1]
                 if msgstr:
-                    msgstr += '\0' # Separator of the various plural forms
+                    msgstr += b'\0' # Separator of the various plural forms
             else:
                 if is_plural:
-                    print >> sys.stderr, 'indexed msgstr required for plural on  %s:%d' %\
-                        (infile, lno)
+                    print('indexed msgstr required for plural on  %s:%d' % (infile, lno),
+                            file=sys.stderr)
                     sys.exit(1)
                 l = l[6:]
         # Skip empty lines
@@ -182,15 +194,15 @@ def make(filename, outfile):
             continue
         l = ast.literal_eval(l)
         if section == CTXT:
-            msgctxt += l
+            msgctxt += l.encode(encoding)
         elif section == ID:
-            msgid += l
+            msgid += l.encode(encoding)
         elif section == STR:
-            msgstr += l
+            msgstr += l.encode(encoding)
         else:
-            print >> sys.stderr, 'Syntax error on %s:%d' % (infile, lno), \
-                  'before:'
-            print >> sys.stderr, l
+            print('Syntax error on %s:%d' % (infile, lno), \
+                  'before:', file=sys.stderr)
+            print(l, file=sys.stderr)
             sys.exit(1)
     # Add last entry
     if section == STR:
@@ -200,9 +212,10 @@ def make(filename, outfile):
     output = generate()
 
     try:
-        open(outfile,"wb").write(output)
+        with open(outfile,"wb") as f:
+            f.write(output)
     except IOError as msg:
-        print >> sys.stderr, msg
+        print(msg, file=sys.stderr)
 
 
 def main():
@@ -218,14 +231,14 @@ def main():
         if opt in ('-h', '--help'):
             usage(0)
         elif opt in ('-V', '--version'):
-            print >> sys.stderr, "msgfmt.py", __version__
+            print("msgfmt.py", __version__)
             sys.exit(0)
         elif opt in ('-o', '--output-file'):
             outfile = arg
     # do it
     if not args:
-        print >> sys.stderr, 'No input file given'
-        print >> sys.stderr, "Try `msgfmt --help' for more information."
+        print('No input file given', file=sys.stderr)
+        print("Try `msgfmt --help' for more information.", file=sys.stderr)
         return
 
     for filename in args:
