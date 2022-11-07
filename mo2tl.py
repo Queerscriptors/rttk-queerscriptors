@@ -149,7 +149,7 @@ def mo2tl(projectpath, mofile, renpy_target_language):
         rttk.msgfmt.make(pofile, dest_mofile)
     else:
         shutil.copy2(mofile, dest_mofile)
-    translations = gettext.translation('game', localedir)
+    translations = gettext.translation('game', localedir, [os.environ['LANG']])
     class NoneOnMissingTranslation:
         @staticmethod
         def gettext(str):
