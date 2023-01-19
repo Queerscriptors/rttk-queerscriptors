@@ -23,7 +23,7 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import sys, subprocess
+import os, sys, subprocess
 
 try:
     import renpy
@@ -33,7 +33,7 @@ except:
 
 def renpy(args):
     global in_renpy
-    command = ['$RENPY_DIR/renpy.sh']
+    command = [os.path.join(os.environ['$RENPY_DIR'], 'renpy.sh')]
     if in_renpy:
         # cf. launcher/game/project.rpy
         command = [sys.executable, '-EO', sys.argv[0]]
