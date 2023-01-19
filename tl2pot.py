@@ -68,7 +68,7 @@ def tl2pot(projectpath, outfile='game.pot'):
         occurrences[s['text']] = occurrences.get(s['text'], 0) + 1
 
     out = io.open(outfile, 'w', encoding='utf-8')
-    out.write(ur"""msgid ""
+    out.write(r"""msgid ""
 msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"

@@ -33,7 +33,7 @@ except:
 
 def renpy(args):
     global in_renpy
-    command = ['renpy.sh']
+    command = ['$RENPY_DIR/renpy.sh']
     if in_renpy:
         # cf. launcher/game/project.rpy
         command = [sys.executable, '-EO', sys.argv[0]]
