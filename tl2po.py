@@ -96,7 +96,7 @@ def tl2po(projectpath, language, outfile=None):
         occurrences[s['text']] = occurrences.get(s['text'], 0) + 1
 
     out = io.open(outfile, 'w', encoding='utf-8')
-    out.write(ur"""msgid ""
+    out.write(r"""msgid ""
 msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -108,7 +108,7 @@ msgstr ""
         if occurrences[s['text']] > 1:
             out.write(u'msgctxt "' + (s['id'] or s['source']) + u'"\n')
         out.write('msgid "' + s['text'] + '"\n')
-        if s['id'] is not None and t_blocks_index.has_key(s['id']):
+        if s['id'] is not None and s['id'] in t_blocks_index:
             out.write(u'msgstr "' + (t_blocks_index[s['id']] or '') + u'"\n')
         else:
             out.write(u'msgstr "' + t_basestr_index.get(s['text'],'') + u'"\n')
